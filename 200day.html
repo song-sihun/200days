@@ -370,35 +370,34 @@
       }
       updatePage(0);
 
-      let isFollowing = false;
+      //여기부터 문어 동작
+      let isGrabbing = false; // 지금 문어를 집어 올린 상태인가?
       const octopus = document.getElementById("octopus-img");
       const container = document.querySelector(".app-container");
+      const originalAnimation = window.getComputedStyle(octopus).animation;
 
-      // [핵심] 잡기/놓기 토글 함수
-      function toggleFollow(e) {
-        // 이벤트 전파 및 기본 동작(모바일 스크롤 등) 방지
-        e.preventDefault();
+      // 1. [집어 올리기] 문어를 누르거나 터치했을 때 작동
+      function startGrabbing(e) {
+        // 모바일에서 스크롤 방지 및 PC에서 드래그 이미지 생성 방지
+        if (e.cancelable) e.preventDefault();
         e.stopPropagation();
 
-        isFollowing = !isFollowing; // 상태 반전
+        isGrabbing = true; // 집어 올린 상태로 변경
+        octopus.style.animation = "none"; // 꼬물꼬물 애니메이션 일시 정지
 
-        if (isFollowing) {
-          octopus.style.animation = "none"; // 애니메이션 일시 정지
-          octopus.style.filter =
-            "brightness(0.85) drop-shadow(0 4px 8px rgba(0,0,0,0.2))"; // 잡힌 느낌 효과
+        // 집어 올린 느낌을 주는 시각 효과 (살짝 어둡게 + 그림자)
+        octopus.style.filter =
+          "brightness(0.85) drop-shadow(0 6px 10px rgba(0,0,0,0.3))";
 
-          // 잡은 즉시 마우스/손가락 위치로 1차 이동 유도
-          moveOctopus(e);
-        } else {
-          octopus.style.filter = "brightness(1)"; // 원래대로 복구
-        }
+        // 잡은 즉시 마우스/손가락 위치로 1차 이동 유도
+        moveOctopus(e);
       }
 
-      // 마우스/손가락 위치를 추적하여 문어를 이동시키는 함수
+      // 2. [이동 중] 손가락을 대고 움직이거나 마우스를 누른 채 움직일 때 작동
       function moveOctopus(e) {
-        if (!isFollowing) return; // 잡힌 상태가 아니면 무시
+        if (!isGrabbing) return; // 집어 올린 상태가 아니면 무시
 
-        // 터치 이벤트와 마우스 이벤트 좌표 처리 통합
+        // 터치/마우스 통합 좌표 계산
         let clientX, clientY;
         if (e.touches && e.touches.length > 0) {
           clientX = e.touches[0].clientX;
@@ -413,7 +412,7 @@
 
         const containerRect = container.getBoundingClientRect();
 
-        // 문어의 중심이 정확히 포인터(마우스/손가락) 위치에 오도록 계산
+        // 문어의 중심이 정확히 포인터(손가락/마우스) 위치에 오도록 계산
         let newX = clientX - containerRect.left - octopus.offsetWidth / 2;
         let newY = clientY - containerRect.top - octopus.offsetHeight / 2;
 
@@ -424,20 +423,37 @@
         newX = Math.max(0, Math.min(newX, maxAllowedX));
         newY = Math.max(0, Math.min(newY, maxAllowedY));
 
-        // 스타일 반영
+        // 스타일 반영 (left, top 좌표로 실시간 이동)
         octopus.style.left = newX + "px";
         octopus.style.top = newY + "px";
-        octopus.style.right = "auto";
-        octopus.style.bottom = "auto";
+        octopus.style.right = "auto"; // 기존 고정 스타일 해제
+        octopus.style.bottom = "auto"; // 기존 고정 스타일 해제
       }
 
-      // 1. 문어 자체를 클릭/터치했을 때 '토글' 작동
-      octopus.addEventListener("click", toggleFollow);
-      octopus.addEventListener("touchstart", toggleFollow, { passive: false });
+      // 3. [놓기] 손가락을 떼거나 마우스 버튼을 놓았을 때 작동
+      function endGrabbing() {
+        if (!isGrabbing) return; // 집어 올린 상태가 아니었다면 무시
 
-      // 2. 화면 전체에서 움직임을 감지하여 문어를 이동시킴
-      document.addEventListener("mousemove", moveOctopus);
+        isGrabbing = false; // 집어 올린 상태 해제
+        octopus.style.filter = "brightness(1)"; // 시각 효과 원상복구
+
+        // [핵심] 그 자리에 놓은 순간, 반동 애니메이션(wiggleOctopus) 다시 시작!
+        octopus.style.animation = originalAnimation;
+      }
+
+      // --- 이벤트 리스너 등록 ---
+
+      // A. 문어를 '누르는' 순간 드래그 시작 (모바일 touchstart / PC mousedown)
+      octopus.addEventListener("touchstart", startGrabbing, { passive: false });
+      octopus.addEventListener("mousedown", startGrabbing);
+
+      // B. 화면 전체에서 '움직이는' 동안 문어 이동 (모바일 touchmove / PC mousemove)
       document.addEventListener("touchmove", moveOctopus, { passive: false });
+      document.addEventListener("mousemove", moveOctopus);
+
+      // C. 화면 전체에서 '손을 떼는' 순간 드래그 종료 (모바일 touchend / PC mouseup)
+      document.addEventListener("touchend", endGrabbing);
+      document.addEventListener("mouseup", endGrabbing);
     </script>
   </body>
 </html>

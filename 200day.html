@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>문코랑 대화</title>
+    <style>
+      /* [기존 기본 스타일 생략 - 이전 답변 코드와 동일합니다] */
+      :root {
+        --bg-color: #d0e2b2;
+        --primary-color: #d3e0b2;
+        --text-color: #4a4a4a;
+        --card-bg: #ffffff;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        font-size: 20px;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      body {
+        background-color: #f0f2f5;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+      }
+
+      .app-container {
+        width: 100%;
+        max-width: 430px;
+        height: 100vh;
+        max-height: 926px;
+        background-color: var(--bg-color);
+        box-shadow:
+          0 14px 28px rgba(0, 0, 0, 0.1),
+          0 10px 10px rgba(0, 0, 0, 0.1);
+        position: relative; /* 중요: 문어가 이 컨테이너 안에 고정됩니다. */
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        border-radius: 0;
+      }
+
+      @media (min-width: 450px) {
+        .app-container {
+          height: 85vh;
+          border-radius: 30px;
+        }
+      }
+
+      .app-header {
+        padding: 20px;
+        text-align: center;
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: var(--primary-color);
+        border-bottom: 1px solid rgba(255, 107, 107, 0.1);
+        background: var(--card-bg);
+        z-index: 10; /* 헤더가 문어보다 위에 보이게 */
+      }
+
+      /* 1. 콘텐츠 영역: 높이를 고정하지 않고, 남는 공간을 유연하게 꽉 채우도록 변경 */
+      .app-content {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 15px; /* 여백을 살짝 줄여서 공간 확보 */
+        position: relative;
+        z-index: 1;
+        min-height: 0; /* [중요] 안쪽 자식이 아무리 커도 부모를 터트리지 않게 방지 */
+      }
+
+      /* 1. 카드 자체의 스타일 수정 */
+      .letter-card {
+        background: var(--card-bg);
+        width: 100%;
+        height: 100%; /* 부모가 주는 남는 공간 가득 채우기 */
+        max-height: 100%;
+        border-radius: 20px;
+        padding: 20px; /* 여백을 살짝 줄여 텍스트 공간 확보 */
+        box-shadow: 0 8px 16px rgba(255, 107, 107, 0.05);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start; /* [중요] 내용이 위에서부터 순서대로 차곡차곡 쌓이게 변경 */
+        text-align: center;
+        transition: all 0.4s ease;
+        opacity: 1;
+        transform: translateY(0);
+        z-index: 5;
+
+        overflow-y: auto; /* 내용이 카드 높이를 넘어가면 전체가 깨지지 않고 카드 내부에서 부드럽게 스크롤 */
+        overflow-x: hidden;
+      }
+
+      /* 2. 카드 안의 스크롤바 숨기기 (더 깔끔하고 앱 같은 느낌을 줍니다) */
+      .letter-card::-webkit-scrollbar {
+        width: 4px; /* 아주 얇은 스크롤바 */
+      }
+      .letter-card::-webkit-scrollbar-thumb {
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 10px;
+      }
+      /* [수정] 자바스크립트에서 지정한 고정 크기를 방해하지 않도록 max-height 제한을 풉니다! */
+      .letter-card img {
+        max-width: 100% !important;
+        height: 100% !important; /* 크기를 320px로 아예 강력하게 고정 */
+        max-height: none !important; /* 기존의 65% 제한을 완전히 해제 */
+        border-radius: 12px;
+        object-fit: cover !important; /* 고정 크기 내에서 사진 비율이 깨지지 않게 방지 */
+        flex-shrink: 0; /* 화면이 작아져도 이미지가 찌그러지는 것을 절대 방지 */
+      }
+
+      /* 4. [새로 추가] 카드 내부의 텍스트가 깨지거나 넘치는 것 방지 */
+      .letter-card p {
+        font-size: 1.15rem;
+        line-height: 1.7;
+        color: var(--text-color);
+        word-break: keep-all;
+        white-space: pre-line;
+        max-height: 100%;
+        overflow-y: auto; /* 텍스트가 혹시 너무 길면 글귀 자체에 스크롤 생성 */
+      }
+      /* 이미지와 글이 함께 나올 때, 아래쪽 편지글 스타일 세밀 조절 */
+      .image-letter-text {
+        font-size: 1.2rem !important;
+        line-height: 1.8 !important;
+        color: #4a4a4a;
+        padding: 0 10px; /* 양옆 여백을 주어 글이 카드 벽에 붙지 않게 함 */
+      }
+
+      .letter-card.fade-out {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+      }
+
+      .letter-card.fade-in {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+      }
+
+      .app-footer {
+        padding: 24px;
+        display: flex;
+        gap: 15px;
+        background: var(--card-bg);
+        border-top: 1px solid rgba(0, 0, 0, 0.05);
+        z-index: 10; /* 하단 바가 문어보다 위에 보이게 */
+      }
+
+      .btn {
+        flex: 1;
+        padding: 16px;
+        border: none;
+        border-radius: 14px;
+        font-size: 1rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .btn-prev {
+        background-color: #e9ecef;
+        color: #495057;
+      }
+
+      .btn-next {
+        background-color: var(--primary-color);
+        color: white;
+      }
+
+      .btn:active {
+        transform: scale(0.96);
+        opacity: 0.9;
+      }
+
+      .btn:disabled {
+        opacity: 0.4;
+        pointer-events: none;
+      }
+
+      /* 1. 움직이는 문어 컨테이너 (앱 우측 하단 고정) */
+      .octopus-character {
+        position: absolute;
+        bottom: 165px; /* 하단 바 위쪽에 위치하도록 조정 */
+        right: 15px; /* 우측 사이드에 고정 */
+        width: 95px; /* 문어 그림 크기 */
+        height: auto;
+        z-index: 2; /* 카드(z-index:5) 보다는 아래, 배경 콘텐츠 보다는 위에 */
+        pointer-events: none; /* 문어 위를 클릭해도 앱 조작에 방해되지 않게 */
+
+        /* [중요] 애니메이션 정의: 꼬물꼬물 움직이는 효과 */
+        animation: wiggleOctopus 12s ease-in-out infinite;
+      }
+
+      /* 2. 애니메이션 키프레임 (양옆으로 조금씩 움직이기) */
+      @keyframes wiggleOctopus {
+        0%,
+        100% {
+          transform: translateX(0) rotate(0deg); /* 원래 위치 */
+        }
+        25% {
+          transform: translateX(-15px) rotate(-3deg); /* 왼쪽으로 살짝 */
+        }
+        75% {
+          transform: translateX(15px) rotate(3deg); /* 오른쪽으로 살짝 */
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-container">
+      <!-- 상단 헤더 -->
+      <div class="app-header" id="app-title"></div>
+
+      <!-- 카드 영역 -->
+      <div class="app-content">
+        <div class="letter-card" id="card">
+          <!-- 자바스크립트로 동적 렌더링되므로 초기 텍스트 비움 -->
+        </div>
+      </div>
+
+      <!-- value에 내가 그린 배경 투명 PNG 파일명을 적으세요 (예: octopus.png) -->
+      <img
+        src="moonko_tp.png"
+        alt="움직이는 문어 대장"
+        class="octopus-character"
+        id="octopus-img"
+      />
+
+      <!-- 하단 조작 바 -->
+      <div class="app-footer">
+        <button class="btn btn-prev" id="btn-prev" onclick="prevPage()">
+          이전
+        </button>
+        <button class="btn btn-next" id="btn-next" onclick="nextPage()">
+          다음
+        </button>
+      </div>
+    </div>
+
+    <script>
+      const contents = [
+        { type: "text", value: "이현아 안녕\n나 문코야🐙" },
+        {
+          type: "text",
+          value:
+            "먼저 ..200일 축하해!!\n너희가 함께한 시간이 벌써 반년이나 됐어\n\n그리고",
+        },
+        {
+          type: "image",
+          value: "img01.png",
+          text: "새로 한 염색 잘 어울잖아\n",
+        },
+        {
+          type: "text",
+          value:
+            "처음이지만 있는 힘껏\n책임감으로 학생들 가르치고,\n\n직장이 어떤 상황에서도 1년 넘게 성실히 맡은 일 다하는 걸 보면 참 기특해",
+        },
+        {
+          type: "text",
+          value:
+            "남자친구가 어린 모습 보일때면\n먼저 마음 열고 대화해줘서 고마워",
+        },
+        {
+          type: "image",
+          value: "img02.png",
+          text: "고마워요",
+        },
+        {
+          type: "text",
+          value:
+            "만난 시간에 비해 많은 곳 못 돌아다녀봤던걸\n남자친구 상황이 어떻고 저떻고\n하면서 이해해줬지만",
+        },
+        {
+          type: "text",
+          value:
+            "선물 한 번 제대로 해주지 못하고\n너가 혹여나 남자친구 때문에 불행하지는 않을까\n혼자 생각하기도 해",
+        },
+        {
+          type: "text",
+          value: "당장 가진것도\n특별한 재주도 없지만..",
+        },
+        {
+          type: "image",
+          value: "img03.jpg",
+        },
+        {
+          type: "text",
+          value: "반드시 메리골드 꽃말처럼 될거야\n\n내가 그렇게 할게",
+        },
+        {
+          type: "image",
+          text: "사랑해 이현아",
+          value: "img04.png",
+        },
+        {
+          type: "image",
+          text: "200일 너무나 조아용~\n카~몬카~몬카몬 사키랍",
+          value: "img05.png",
+        },
+      ];
+
+      let currentIndex = 0;
+      const card = document.getElementById("card");
+      const btnPrev = document.getElementById("btn-prev");
+      const btnNext = document.getElementById("btn-next");
+      const appTitle = document.getElementById("app-title");
+
+      function updatePage(index) {
+        card.classList.add("fade-out");
+
+        setTimeout(() => {
+          currentIndex = index;
+          const currentData = contents[currentIndex];
+          // appTitle.innerText = `축하메세지 (${currentIndex + 1}/${contents.length})`;
+          appTitle.innerText = `200일 메세지`;
+
+          if (currentData.type === "image") {
+            card.style.justifyContent = "flex-start";
+            card.innerHTML = `
+              <div class="image-letter-text" style="margin-top: 0px; font-size: 20px; line-height: 1.7; color: #4a4a4a; word-break: keep-all; white-space: pre-line; text-align: center; width: 100%;">${currentData.text || ""}</div>
+               <img src="${currentData.value}" alt="기념일 사진" style="width: 100%; max-width: 100%; height: 100%; border-radius: 12px; object-fit: cover;">
+             `;
+          } else {
+            card.style.justifyContent = "center";
+            card.innerHTML = `<p class="letter-text" id="text" style="font-size: 1.25rem; line-height: 1.8; color: #4a4a4a; word-break: keep-all; white-space: pre-line;">${currentData.value}</p>`;
+          }
+
+          btnPrev.disabled = currentIndex === 0;
+          if (currentIndex === contents.length - 1) {
+            btnNext.innerText = "끝";
+          } else {
+            btnNext.innerText = "다음";
+          }
+
+          card.classList.remove("fade-out");
+          card.classList.add("fade-in");
+          card.offsetWidth;
+          card.classList.remove("fade-in");
+        }, 300);
+      }
+
+      function nextPage() {
+        if (currentIndex < contents.length - 1) {
+          updatePage(currentIndex + 1);
+        } else {
+          // updatePage(0);
+        }
+      }
+
+      function prevPage() {
+        if (currentIndex > 0) {
+          updatePage(currentIndex - 1);
+        }
+      }
+
+      updatePage(0);
+    </script>
+  </body>
+</html>

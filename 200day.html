@@ -198,7 +198,8 @@
         width: 95px; /* 문어 그림 크기 */
         height: auto;
         z-index: 2; /* 카드(z-index:5) 보다는 아래, 배경 콘텐츠 보다는 위에 */
-        pointer-events: none; /* 문어 위를 클릭해도 앱 조작에 방해되지 않게 */
+        /* pointer-events: none; */
+        /* 문어 위를 클릭해도 앱 조작에 방해되지 않게 */
 
         /* [중요] 애니메이션 정의: 꼬물꼬물 움직이는 효과 */
         animation: wiggleOctopus 12s ease-in-out infinite;
@@ -237,6 +238,8 @@
         alt="움직이는 문어 대장"
         class="octopus-character"
         id="octopus-img"
+        onmousedown="startDrag(event)"
+        ontouchstart="startDrag(event)"
       />
 
       <!-- 하단 조작 바 -->
@@ -365,8 +368,76 @@
           updatePage(currentIndex - 1);
         }
       }
-
       updatePage(0);
+
+      let isFollowing = false;
+      const octopus = document.getElementById("octopus-img");
+      const container = document.querySelector(".app-container");
+
+      // [핵심] 잡기/놓기 토글 함수
+      function toggleFollow(e) {
+        // 이벤트 전파 및 기본 동작(모바일 스크롤 등) 방지
+        e.preventDefault();
+        e.stopPropagation();
+
+        isFollowing = !isFollowing; // 상태 반전
+
+        if (isFollowing) {
+          octopus.style.animation = "none"; // 애니메이션 일시 정지
+          octopus.style.filter =
+            "brightness(0.85) drop-shadow(0 4px 8px rgba(0,0,0,0.2))"; // 잡힌 느낌 효과
+
+          // 잡은 즉시 마우스/손가락 위치로 1차 이동 유도
+          moveOctopus(e);
+        } else {
+          octopus.style.filter = "brightness(1)"; // 원래대로 복구
+        }
+      }
+
+      // 마우스/손가락 위치를 추적하여 문어를 이동시키는 함수
+      function moveOctopus(e) {
+        if (!isFollowing) return; // 잡힌 상태가 아니면 무시
+
+        // 터치 이벤트와 마우스 이벤트 좌표 처리 통합
+        let clientX, clientY;
+        if (e.touches && e.touches.length > 0) {
+          clientX = e.touches[0].clientX;
+          clientY = e.touches[0].clientY;
+        } else if (e.changedTouches && e.changedTouches.length > 0) {
+          clientX = e.changedTouches[0].clientX;
+          clientY = e.changedTouches[0].clientY;
+        } else {
+          clientX = e.clientX;
+          clientY = e.clientY;
+        }
+
+        const containerRect = container.getBoundingClientRect();
+
+        // 문어의 중심이 정확히 포인터(마우스/손가락) 위치에 오도록 계산
+        let newX = clientX - containerRect.left - octopus.offsetWidth / 2;
+        let newY = clientY - containerRect.top - octopus.offsetHeight / 2;
+
+        // .app-container 틀 밖으로 빠져나가지 않도록 좌표 제한 (안전장치)
+        const maxAllowedX = containerRect.width - octopus.offsetWidth;
+        const maxAllowedY = containerRect.height - octopus.offsetHeight;
+
+        newX = Math.max(0, Math.min(newX, maxAllowedX));
+        newY = Math.max(0, Math.min(newY, maxAllowedY));
+
+        // 스타일 반영
+        octopus.style.left = newX + "px";
+        octopus.style.top = newY + "px";
+        octopus.style.right = "auto";
+        octopus.style.bottom = "auto";
+      }
+
+      // 1. 문어 자체를 클릭/터치했을 때 '토글' 작동
+      octopus.addEventListener("click", toggleFollow);
+      octopus.addEventListener("touchstart", toggleFollow, { passive: false });
+
+      // 2. 화면 전체에서 움직임을 감지하여 문어를 이동시킴
+      document.addEventListener("mousemove", moveOctopus);
+      document.addEventListener("touchmove", moveOctopus, { passive: false });
     </script>
   </body>
 </html>
